@@ -1,3 +1,4 @@
+library(Rcpp)
 library(RcppArmadillo)
 sourceCpp(file='src/LDA.cpp')
 LDA.SVI<-function(X, # the Input data
@@ -8,8 +9,6 @@ LDA.SVI<-function(X, # the Input data
                   pre # the stop criteria
 )
 {
-  len <- length(X)
-  names(X) <-as.character(1:len)
   Y <- SVI_LAD(X,K,n,alpha,eta,pre)
   print(Y)
 }
