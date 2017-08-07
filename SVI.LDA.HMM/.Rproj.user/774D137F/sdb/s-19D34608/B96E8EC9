@@ -1,0 +1,20 @@
+{
+    "collab_server" : "",
+    "contents" : "library(Rcpp)\nlibrary(RcppArmadillo)\nsourceCpp(file='src/LDA.cpp')\nLDA.SVI<-function(X, # the Input data\n                  K, # the number of the topics\n                  n, # the number of the passes\n                  alpha, # the parameter of theta\n                  eta, # the parameter of beta\n                  pre # the stop criteria\n)\n{\n  Y <- SVI_LAD(X,K,n,alpha,eta,pre)\n  print(Y)\n}\nX=list(c('home','mother','mother','house'),c('father','dad','cat','dad'))\nK=2;\nalpha=1/K;\neta=0.01;\nn=2;\npre=0.1;\nt=LDA.SVI(X,K,n,alpha=1/K,eta=0.01,pre=0.1)\n",
+    "created" : 1501800220215.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "3166949202",
+    "id" : "B96E8EC9",
+    "lastKnownWriteTime" : 1502129575,
+    "last_content_update" : -2147483648,
+    "path" : "D:/Rproject/SVI.LDA.HMM/R/SVI_LDA.R",
+    "project_path" : "R/SVI_LDA.R",
+    "properties" : {
+    },
+    "relative_order" : 2,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}

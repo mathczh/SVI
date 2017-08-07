@@ -26,7 +26,6 @@ SEXP SVI_LAD(Rcpp:: List &X,
     Rcpp::StringVector document = Rcpp::as<Rcpp::StringVector>(X[i]) ;
     for(int j=0;j< document.size();j++)
     {
-      std::cout<<document[j]<<std::endl;
       mymap[""+document[j]+""]=0;
     }
   }
@@ -39,16 +38,14 @@ SEXP SVI_LAD(Rcpp:: List &X,
   int D= X.size();
   int V= mymap.size();
   Rcpp::NumericMatrix Lambda(V,K);
-  Lambda.fill(0.1);
+       for( int i=0;i<V;i++)//initiate Lambda with rchisq
+         {
+             for(int j=0;j<K;j++)
+             {
+               Lambda(i,j)=R::rchisq(1);
+             }
+          }
   Rcpp::NumericMatrix gamma(K,D) ; //random initial with all 0 entry
-  for( int i=0;i<V;i++)
-  {
-    std::cout<<"Lambda:"<<i<<": "<<std::endl;
-    for(int j=0;j<K;j++)
-    {
-      std::cout<<" " << Lambda(i,j)<<std::endl;
-    }
-  }
   Rcpp::List phi(D);
   for(int i=0;i<n;i++)
   {
@@ -87,14 +84,6 @@ SEXP SVI_LAD(Rcpp:: List &X,
       arma::mat Lambda_temp = as<arma::mat>(Lambda);
       Lambda_temp = (1-1.0/(i*D+d+1))*Lambda_temp+1.0/(i*D+d+1)*result_temp;
       Lambda=Rcpp::wrap(Lambda_temp);
-      for( int p=0;p<V;p++)
-      {
-        std::cout<<"Lambda:"<<p<<": "<<std::endl;
-        for(int q=0;q<K;q++)
-        {
-          std::cout<<" " << Lambda(p,q)<<std::endl;
-        }
-      }
     }
   }
   return Rcpp::List::create(Lambda,phi,gamma);

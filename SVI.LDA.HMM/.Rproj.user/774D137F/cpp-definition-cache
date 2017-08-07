@@ -6,13 +6,13 @@
                 "file" : "D:/Rproject/SVI.LDA.HMM/src/LDA.cpp",
                 "kind" : 6,
                 "line" : 10,
-                "name" : "SVI_LAD(int &, SEXP, SEXP, SEXP, SEXP, SEXP)",
+                "name" : "SVI_LDA(int &, SEXP, SEXP, SEXP, SEXP, SEXP)",
                 "parent_name" : "",
-                "usr" : "c:@F@SVI_LAD#&I#*$@S@SEXPREC#S1_#S1_#S1_#S1_#"
+                "usr" : "c:@F@SVI_LDA#&I#*$@S@SEXPREC#S1_#S1_#S1_#S1_#"
             }
         ],
         "file" : "D:/Rproject/SVI.LDA.HMM/src/LDA.cpp",
-        "file_last_write" : 1501870360
+        "file_last_write" : 1502116056
     },
     {
         "definitions" : [
