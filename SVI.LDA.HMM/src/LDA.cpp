@@ -12,9 +12,12 @@ SEXP SVI_LAD(Rcpp:: List &X,
              SEXP  nn,
              SEXP alphaa ,
              SEXP  etaa,
-             SEXP  pree)
+             SEXP  pree,
+             SEXP  kk
+               )
 {
   int K = Rcpp::as<int>(KK);
+  int k = Rcpp::as<int>(kk);
   int n = Rcpp::as<int>(nn);
   double alpha = Rcpp::as<double>(alphaa);
   double eta = Rcpp::as<double>(etaa);
@@ -29,22 +32,24 @@ SEXP SVI_LAD(Rcpp:: List &X,
       mymap[""+document[j]+""]=0;
     }
   }
+  int D= X.size();
+  int V= mymap.size();
+  Rcpp::StringVector Dictionary (V) ;
   int value =0;
   for(iter=mymap.begin();iter !=mymap.end();iter++)
   {
     mymap[""+iter->first+""]=value;
+    Dictionary[iter->second]=iter->first;
     value++;
   }
-  int D= X.size();
-  int V= mymap.size();
   Rcpp::NumericMatrix Lambda(V,K);
-       for( int i=0;i<V;i++)//initiate Lambda with rchisq
-         {
-             for(int j=0;j<K;j++)
-             {
+  for( int i=0;i<V;i++)//initiate Lambda with rchisq
+      {
+         for(int j=0;j<K;j++)
+           {
                Lambda(i,j)=R::rchisq(1);
-             }
-          }
+           }
+       }
   Rcpp::NumericMatrix gamma(K,D) ; //random initial with all 0 entry
   Rcpp::List phi(D);
   for(int i=0;i<n;i++)
@@ -86,7 +91,23 @@ SEXP SVI_LAD(Rcpp:: List &X,
       Lambda=Rcpp::wrap(Lambda_temp);
     }
   }
-  return Rcpp::List::create(Lambda,phi,gamma);
+  arma::mat Lambda_temp = as<arma::mat>(Lambda);
+  Lambda_temp.print();
+  Rcpp::StringMatrix Topic(k,K) ;
+ for(int i=0;i<K;i++)
+ {
+   arma::vec topic_i = Lambda_temp.col(i);
+   arma::uvec topic_index = arma::sort_index(topic_i,1);
+
+   std::cout<<std::endl<<i<<"  "<<std::endl;
+   for(int j=0;j<k;j++)
+   {
+       std::cout<<" " <<topic_index[j]<<" "<<Dictionary[topic_index[j]];
+       Topic(j,i)=Dictionary[topic_index[j]];
+   }
+ }
+
+  return Rcpp::List::create(Lambda,phi,gamma,Topic,Dictionary);
 }
 /*** R
 */

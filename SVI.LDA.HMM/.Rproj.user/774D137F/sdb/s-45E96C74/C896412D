@@ -1,0 +1,20 @@
+{
+    "collab_server" : "",
+    "contents" : "// [[Rcpp::depends(RcppArmadillo)]]\n#include<RcppArmadillo.h>\n#include <string>\n#include <map>\n#include<Rinternals.h>\n#include<math.h>\nusing namespace std;\nusing namespace Rcpp;\n// [[Rcpp::export]]\nSEXP SVI_LAD(Rcpp:: List &X,\n             SEXP  KK,\n             SEXP  nn,\n             SEXP alphaa ,\n             SEXP  etaa,\n             SEXP  pree,\n             SEXP  kk\n               )\n{\n  int K = Rcpp::as<int>(KK);\n  int k = Rcpp::as<int>(kk);\n  int n = Rcpp::as<int>(nn);\n  double alpha = Rcpp::as<double>(alphaa);\n  double eta = Rcpp::as<double>(etaa);\n  double pre = Rcpp::as<double>(pree);\n  std::map<std::string, int> mymap;\n  std::map<std::string, int>::iterator iter;\n  for(int i= 0;i< X.size();i++) //Produce map to stroe the whole vocabulary\n  {\n    Rcpp::StringVector document = Rcpp::as<Rcpp::StringVector>(X[i]) ;\n    for(int j=0;j< document.size();j++)\n    {\n      mymap[\"\"+document[j]+\"\"]=0;\n    }\n  }\n  int D= X.size();\n  int V= mymap.size();\n  Rcpp::StringVector Dictionary (V) ;\n  int value =0;\n  for(iter=mymap.begin();iter !=mymap.end();iter++)\n  {\n    mymap[\"\"+iter->first+\"\"]=value;\n    Dictionary[iter->second]=iter->first;\n    value++;\n  }\n  Rcpp::NumericMatrix Lambda(V,K);\n  for( int i=0;i<V;i++)//initiate Lambda with rchisq\n      {\n         for(int j=0;j<K;j++)\n           {\n               Lambda(i,j)=R::rchisq(1);\n           }\n       }\n  Rcpp::NumericMatrix gamma(K,D) ; //random initial with all 0 entry\n  Rcpp::List phi(D);\n  for(int i=0;i<n;i++)\n  {\n    for(int d=0;d<D;d++)\n    {\n      for(int v=0;v<K;v++)\n      {\n        gamma(v,d)=1;\n      }\n      Rcpp::NumericVector gamma1(K);\n      Rcpp::StringVector Y = Rcpp::as<Rcpp::StringVector>(X[d]) ;\n      Rcpp::NumericMatrix w(V,Y.size()) ;\n      Rcpp::NumericMatrix mid(Y.size(),K);\n      Rcpp::NumericMatrix mid_norm(Y.size(),K);\n      double norm = sum(abs(gamma(_,d)-gamma1));//calculate norm as stop criteria\n      while(norm>=pre)\n      {\n        gamma1=gamma(_,d);\n        for(int j=0;j<Y.size();j++)\n        {\n          Rcpp::NumericVector w_temp(V);\n          iter =mymap.find(\"\"+Y[j]+\"\");\n          int index_inmap = iter->second;\n          w_temp[index_inmap]=1;\n          w(_,j)= w_temp;\n          mid(j,_)=exp(digamma(gamma(_,d))+digamma(Lambda(index_inmap,_))-digamma(colSums(Lambda)));\n          mid_norm(j,_)=mid(j,_)/sum(mid(j,_));//normalize parameter\n        }\n        gamma(_,d)= alpha+colSums(mid_norm);\n        norm = sum(abs(gamma(_,d)-gamma1));\n      }\n      phi[d]= mid_norm;\n      arma::mat midnorm_temp = as<arma::mat>(mid_norm);//convert NumericMtrix into arma::mat;\n      arma::mat w_temp = as<arma::mat>(w);\n      arma::mat result_temp=eta+D*w_temp*midnorm_temp;\n      arma::mat Lambda_temp = as<arma::mat>(Lambda);\n      Lambda_temp = (1-1.0/(i*D+d+1))*Lambda_temp+1.0/(i*D+d+1)*result_temp;\n      Lambda=Rcpp::wrap(Lambda_temp);\n    }\n  }\n  arma::mat Lambda_temp = as<arma::mat>(Lambda);\n  Lambda_temp.print();\n  Rcpp::StringMatrix Topic(k,K) ;\n for(int i=0;i<K;i++)\n {\n   arma::vec topic_i = Lambda_temp.col(i);\n   arma::uvec topic_index = arma::sort_index(topic_i,1);\n\n   std::cout<<std::endl<<i<<\"  \"<<std::endl;\n   for(int j=0;j<k;j++)\n   {\n       std::cout<<\" \" <<topic_index[j]<<\" \"<<Dictionary[topic_index[j]];\n       Topic(j,i)=Dictionary[topic_index[j]];\n   }\n }\n\n  return Rcpp::List::create(Lambda,phi,gamma,Topic,Dictionary);\n}\n/*** R\n*/\n",
+    "created" : 1501619459862.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "1183284604",
+    "id" : "C896412D",
+    "lastKnownWriteTime" : 1502245755,
+    "last_content_update" : -2147483648,
+    "path" : "D:/Rproject/SVI.LDA.HMM/src/LDA.cpp",
+    "project_path" : "src/LDA.cpp",
+    "properties" : {
+    },
+    "relative_order" : 2,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "cpp"
+}
