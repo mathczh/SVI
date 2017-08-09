@@ -66,8 +66,10 @@ SEXP SVI_LDA(Rcpp:: List &X,
       Rcpp::NumericMatrix mid(Y.size(),K);
       Rcpp::NumericMatrix mid_norm(Y.size(),K);
       double norm = sum(abs(gamma(_,d)-gamma1));//calculate norm as stop criteria
-      while(norm>=pre)
+      double old_norm = 0;
+      while((norm-old_norm)/norm>=pre)
       {
+        old_norm = norm;
         gamma1=gamma(_,d);
         for(int j=0;j<Y.size();j++)
         {
@@ -92,17 +94,13 @@ SEXP SVI_LDA(Rcpp:: List &X,
     }
   }
   arma::mat Lambda_temp = as<arma::mat>(Lambda);
-  Lambda_temp.print();
   Rcpp::StringMatrix Topic(topic_length,K) ;
  for(int i=0;i<K;i++)
  {
    arma::vec topic_i = Lambda_temp.col(i);
    arma::uvec topic_index = arma::sort_index(topic_i,1);
-
-   std::cout<<std::endl<<i<<"  "<<std::endl;
    for(int j=0;j<topic_length;j++)
    {
-       std::cout<<" " <<topic_index[j]<<" "<<Dictionary[topic_index[j]];
        Topic(j,i)=Dictionary[topic_index[j]];
    }
  }
