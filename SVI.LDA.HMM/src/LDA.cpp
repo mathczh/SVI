@@ -7,17 +7,17 @@
 using namespace std;
 using namespace Rcpp;
 // [[Rcpp::export]]
-SEXP SVI_LAD(Rcpp:: List &X,
+SEXP SVI_LDA(Rcpp:: List &X,
              SEXP  KK,
              SEXP  nn,
              SEXP alphaa ,
              SEXP  etaa,
              SEXP  pree,
-             SEXP  kk
+             SEXP  topic_lengthh
                )
 {
   int K = Rcpp::as<int>(KK);
-  int k = Rcpp::as<int>(kk);
+  int topic_length = Rcpp::as<int>(topic_lengthh);
   int n = Rcpp::as<int>(nn);
   double alpha = Rcpp::as<double>(alphaa);
   double eta = Rcpp::as<double>(etaa);
@@ -93,14 +93,14 @@ SEXP SVI_LAD(Rcpp:: List &X,
   }
   arma::mat Lambda_temp = as<arma::mat>(Lambda);
   Lambda_temp.print();
-  Rcpp::StringMatrix Topic(k,K) ;
+  Rcpp::StringMatrix Topic(topic_length,K) ;
  for(int i=0;i<K;i++)
  {
    arma::vec topic_i = Lambda_temp.col(i);
    arma::uvec topic_index = arma::sort_index(topic_i,1);
 
    std::cout<<std::endl<<i<<"  "<<std::endl;
-   for(int j=0;j<k;j++)
+   for(int j=0;j<topic_length;j++)
    {
        std::cout<<" " <<topic_index[j]<<" "<<Dictionary[topic_index[j]];
        Topic(j,i)=Dictionary[topic_index[j]];
