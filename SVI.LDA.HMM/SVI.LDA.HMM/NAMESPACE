@@ -1,0 +1,3 @@
+useDynLib(SVI.LDA.HMM, .registration=TRUE)
+exportPattern("^[[:alpha:]]+")
+importFrom(Rcpp, evalCpp)
