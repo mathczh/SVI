@@ -207,7 +207,7 @@ SVI.HMM <- function( Data_sequence, # Observed data
             sigma[[i_local]]=(1-((i-1)*(T-sub_length+1)+j)^(-1))*sigma[[i_local]]+((i-1)*(T-sub_length+1)+j)^(-1)*((T-sub_length+1)/sub_length*q_x_sum3[i_local,,]+U_phi3)
        }
        v = (1-((i-1)*(T-sub_length+1)+j)^(-1))*v+((i-1)*(T-sub_length+1)+j)^(-1)*((T-sub_length+1)/sub_length*q_x_sum4+U_phi4)
-        # print(W_A)
+        print(W_A)
        # print(A_)
        # print(P_)
        # print(pi_hat)
@@ -216,8 +216,8 @@ SVI.HMM <- function( Data_sequence, # Observed data
        # print(beta_original)
        # print(q_x)
        # print(q_transition)
-       #  print(u)
-       # print(sigma)
+       print(u)
+       print(sigma)
      }
    }
 }
@@ -228,10 +228,10 @@ u0 = rep(2,3) # initial mean value
 k0=1          # initial parameter
 v0=6           # initial parameter
 sigma0 = diag(rep(1,3)) # initial covariance with identity matrix
-U_A = 1/K-1      # Hyperperameter the same notation with the paper
+U_A = 1/K     # Hyperperameter the same notation with the paper
 U_phi1 = 2*k0*u0 # Hyperperameter the same notation with the paper
 U_phi2 = 2*k0    # Hyperperameter the same notation with the paper
 U_phi3 = sigma0+2*k0*u0%*%t(u0) # Hyperperameter the same notation with the paper
 U_phi4 = v0+2+3  # Hyperperameter the same notation with the paper
 sub_length =18   # sample chain length
-SVI.HMM(data,sub_length = 18,K=2,alpha, u0, k0, sigma0, v0, U_A, U_phi1,U_phi2, U_phi3, U_phi4, Pass=5)
+SVI.HMM(data,sub_length = 18,K=2,alpha, u0, k0, sigma0, v0, U_A, U_phi1,U_phi2, U_phi3, U_phi4, Pass=2)
