@@ -82,21 +82,18 @@ SVI.HMM <- function( Data_sequence, # Observed data
     for(j in 1:(T-sub_length+1))  # sample each subchain
     {
       A_ = exp(digamma(W_A)-digamma(rowSums(W_A)));# the same with S11
-
+      trick_sum = rep(0,K)
         for(t in j:(j+sub_length-1))
         {
-          max_temp = 0.5*v[1]*t(Data_sequence[[t]]-u[,1])%*%solve(sigma[[1]])%*%(Data_sequence[[t]]-u[,1])
+
           for(m in 1:K)
           {
-              max_candidate = 0.5*v[m]*t(Data_sequence[[t]]-u[,m])%*%solve(sigma[[m]])%*%(Data_sequence[[t]]-u[,m]);
-              if(max_temp<max_candidate)
-              {
-                max_temp=max_candidate
-              }
+              trick_sum[m]=(-0.5*Dim*logb(pi)+0.5*(sum(digamma(0.5*(v[m]+1-1:Dim))))-0.5*logb(det(sigma[[m]]))-0.5*Dim/k[m]-0.5*v[m]*t(Data_sequence[[t]]-u[,m])%*%solve(sigma[[m]])%*%(Data_sequence[[t]]-u[,m]));
           }
+          shift_center = max(trick_sum)
           for(m in 1:K)
           {
-            P_[t,m]= exp(-0.5*Dim*logb(pi)+0.5*(sum(digamma(0.5*(v[m]+1-1:Dim))))-0.5*logb(det(sigma[[m]]))-0.5*Dim/k[m]-0.5*v[m]*t(Data_sequence[[t]]-u[,m])%*%solve(sigma[[m]])%*%(Data_sequence[[t]]-u[,m])+max_temp);
+            P_[t,m]= exp(trick_sum[m]-shift_center-log(sum(exp(trick_sum-shift_center))));
           }
          }
 
@@ -229,13 +226,13 @@ data <-list(c(1.8,2.0))
 sigma0 = diag(rep(100,2))
 for(i in 1:100)
 {
-  if(i%%4==0||i%%4==1)
+  if(i%%6==0||i%%6==1)
   {
     data[[i]]=rnorm(2);
   }
   else
   {
-    data[[i]]= rnorm(2,c(50,50),10);
+    data[[i]]= rnorm(2,c(200,200),10);
   }
 }
 K=2

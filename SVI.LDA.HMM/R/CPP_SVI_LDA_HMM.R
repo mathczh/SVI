@@ -73,14 +73,49 @@ SVI.HMM <- function( Data_sequence, # Observed data
   result= SVI_HMM(Data_sequence,sub_length,K,W_A,u,k,sigma,v,U_A,U_phi1,U_phi2,U_phi3,U_phi4,Dim,Pass,pre)
   return(result)
 }
-data <-list(c(1.8,2.0),c(1,2),c(1.1,1.6),c(1.7,1.7),c(1,2),c(1.1,1.6),c(1,2),c(1.1,1.6),c(1.7,1.7),c(1,2),c(1.1,1.6),c(2,4),c(3,3))
+library(Rcpp)
+library(RcppArmadillo)
+SVI.HMM <- function( Data_sequence, # Observed data
+                     sub_length , # subchain length
+                     K,             #Hidden_state_number
+                     W_A,         # initial parameter,which controls transition matrix
+                     u,            # initial mean value
+                     k,            # initial parameter, which controls Gassuian Distribution
+                     sigma,        # initial covariance matrix
+                     v,             # initial parameter, which controls Gassuian Distribution
+                     U_A,    # Hyperparameter
+                     U_phi1, # Hyperparameter
+                     U_phi2, # Hyperperameter the same notation with the paper
+                     U_phi3, # Hyperperameter the same notation with the paper
+                     U_phi4, # Hyperperameter the same notation with the paper
+                     Pass,    # toal pass
+                     pre
+)
+{
+  Dim=length(Data_sequence[[1]])  # data_dimention
+  sourceCpp(file='src/HMM.cpp')
+  result= SVI_HMM(Data_sequence,sub_length,K,W_A,u,k,sigma,v,U_A,U_phi1,U_phi2,U_phi3,U_phi4,Dim,Pass,pre)
+  return(result)
+}
+data <-list(c(1.8,2.0))
+sigma0 = diag(rep(1,2))
+for(i in 1:10000)
+{
+  if(i%%6==0||i%%6==1)
+  {
+    data[[i]]=rnorm(2);
+  }
+  else
+  {
+    data[[i]]= rnorm(2,c(200,200),10);
+  }
+}
 K=2
 Dim=length(data[[1]])# Gassiuan Component Number
-alpha=1/K        #
 u0 = 1:Dim # initial mean value
 k0=1             # initial parameter
 v0=6             # initial parameter
-sigma0 = diag(rep(1,2)) # initial covariance with identity matrix
+# initial covariance with identity matrix
 U_A = matrix(rep(1/K,K*K),K)        # Hyperperameter the same notation with the paper
 U_phi1 = matrix(rep(0,Dim*K),Dim) # Hyperperameter the same notation with the paper
 for(i in 1:K)
@@ -100,12 +135,12 @@ k = 1:K;                  # claim k, which controls Gussuian Distribution
 v = (3+Dim):(2+Dim+K);                  # claim v, which controls Gussuian Distribution
 for( i in 1:K)
 {
-  u[,i]=i*u0;                    # initial every component with the same mean value
+  u[,i]=u0;                    # initial every component with the same mean value
 }
 sigma = list(K)
 for(i in 1:K)
 {
-  sigma[[i]]= i*sigma0;         # initial every component with the same covariance
+  sigma[[i]]= sigma0;         # initial every component with the same covariance
 }
 W_A = matrix(1:(K*K),K);
-result = SVI.HMM(data,sub_length =13,K=2,W_A, u, k, sigma, v, U_A, U_phi1,U_phi2, U_phi3, U_phi4, Pass=100, pre=0.01)
+result = SVI.HMM(data,sub_length =10000,K=2,W_A, u, k, sigma, v, U_A, U_phi1,U_phi2, U_phi3, U_phi4, Pass=1000, pre=0.01)
