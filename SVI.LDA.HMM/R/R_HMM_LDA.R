@@ -1,54 +1,54 @@
-LDA.SVI<-function(X, # the Input data
-                  K, # the number of the topics
-                  n, # the number of the passes
-                  alpha, # the parameter of theta
-                  eta, # the parameter of beta
-                  pre, # the stop criteria
-                  topic_length# the number of top words and topics
-
-)
-{
-       library(Rcpp)
-       library(RcppArmadillo)
-       sourceCpp(file='src/LDA.cpp')
-       t=  SVI_LDA(X,K,n,alpha,eta,pre,topic_length)
-       names(t)=c("Lan","LSS","LL","SSS","SSSSSS")
-       return(t)
-}
-
-Tokenize<-function(Data_set, # the Input original data, which is a list data type
-                   Language = "en"# the language type you want to produce, defaut language is en
-                   )
-{
-     library(tokenizers);
-     tokenized_data <-tokenize_words(Data_set, stopwords = stopwords(Language));
-     return(tokenized_data);
-}
-Stemming <- function(Tokenized_data)
-{
-  library(tokenizers);
-   Document_num = length(Tokenized_data);
-   Stem_data <- list(Document_num);
-   for( i in 1:length(Tokenized_data))
-   {
-      Stem_data[[i]]=wordStem(unlist(Tokenized_data[i]));
-   }
-   return (Stem_data);
-}
-
- X=list(c('home','mother','mother','house','mother',rep("cat",3)),c('father','dad','cat','dad','cat','cat','cat','cat','cat','cat'))
-K=3;
-alpha=1/K;
-eta=0.01;
-n=100;
-pre=0.1;
-t=LDA.SVI(X,K,n,alpha=1/K,eta=0.01,pre=0.01,topic_length= 3)
-doc_a = "Brocolli is good to eat. My brother likes to eat good brocolli, but not my mother."
-doc_b = "My mother spends a lot of time driving my brother around to baseball practice."
-doc_c = "Some health experts suggest that driving may cause increased tension and blood pressure."
-doc_d = "I often feel pressure to perform well at school, but my mother never seems to drive my brother to do better."
-doc_e = "Health professionals say that brocolli is good for your health."
-data <- list(doc_a,doc_b,doc_c,doc_d,doc_e)
+# LDA.SVI<-function(X, # the Input data
+#                   K, # the number of the topics
+#                   n, # the number of the passes
+#                   alpha, # the parameter of theta
+#                   eta, # the parameter of beta
+#                   pre, # the stop criteria
+#                   topic_length# the number of top words and topics
+#
+# )
+# {
+#        library(Rcpp)
+#        library(RcppArmadillo)
+#        sourceCpp(file='src/LDA.cpp')
+#        t=  SVI_LDA(X,K,n,alpha,eta,pre,topic_length)
+#        names(t)=c("Lan","LSS","LL","SSS","SSSSSS")
+#        return(t)
+# }
+#
+# Tokenize<-function(Data_set, # the Input original data, which is a list data type
+#                    Language = "en"# the language type you want to produce, defaut language is en
+#                    )
+# {
+#      library(tokenizers);
+#      tokenized_data <-tokenize_words(Data_set, stopwords = stopwords(Language));
+#      return(tokenized_data);
+# }
+# Stemming <- function(Tokenized_data)
+# {
+#   library(tokenizers);
+#    Document_num = length(Tokenized_data);
+#    Stem_data <- list(Document_num);
+#    for( i in 1:length(Tokenized_data))
+#    {
+#       Stem_data[[i]]=wordStem(unlist(Tokenized_data[i]));
+#    }
+#    return (Stem_data);
+# }
+#
+#  X=list(c('home','mother','mother','house','mother',rep("cat",3)),c('father','dad','cat','dad','cat','cat','cat','cat','cat','cat'))
+# K=3;
+# alpha=1/K;
+# eta=0.01;
+# n=100;
+# pre=0.1;
+# t=LDA.SVI(X,K,n,alpha=1/K,eta=0.01,pre=0.01,topic_length= 3)
+# doc_a = "Brocolli is good to eat. My brother likes to eat good brocolli, but not my mother."
+# doc_b = "My mother spends a lot of time driving my brother around to baseball practice."
+# doc_c = "Some health experts suggest that driving may cause increased tension and blood pressure."
+# doc_d = "I often feel pressure to perform well at school, but my mother never seems to drive my brother to do better."
+# doc_e = "Health professionals say that brocolli is good for your health."
+# data <- list(doc_a,doc_b,doc_c,doc_d,doc_e)
 SVI.HMM <- function( Data_sequence, # Observed data
                      sub_length , # subchain length
                      K,             #Hidden_state_number
@@ -82,15 +82,25 @@ SVI.HMM <- function( Data_sequence, # Observed data
     for(j in 1:(T-sub_length+1))  # sample each subchain
     {
       A_ = exp(digamma(W_A)-digamma(rowSums(W_A)));# the same with S11
-      for(m in 1:K)
-      {
+
         for(t in j:(j+sub_length-1))
         {
-          # this formulate is given by you and please check it again to promise its accuracy
-          P_[t,m]= exp(-0.5*logb(2*pi)-0.5*(sum(digamma(0.5*(v[m]+1-1:Dim))))+Dim*logb(2)-logb(det(sigma[[m]]))-0.5*Dim/k[m]-0.5*v[m]*t(Data_sequence[[t]]-u[,m])%*%solve(sigma[[m]])%*%(Data_sequence[[t]]-u[,m]));
+          max_temp = 0.5*v[1]*t(Data_sequence[[t]]-u[,1])%*%solve(sigma[[1]])%*%(Data_sequence[[t]]-u[,1])
+          for(m in 1:K)
+          {
+              max_candidate = 0.5*v[m]*t(Data_sequence[[t]]-u[,m])%*%solve(sigma[[m]])%*%(Data_sequence[[t]]-u[,m]);
+              if(max_temp<max_candidate)
+              {
+                max_temp=max_candidate
+              }
           }
-      }
-      Eq_A = W_A/rowSums(W_A)#Get the expectation of A with q(A) density function
+          for(m in 1:K)
+          {
+            P_[t,m]= exp(-0.5*Dim*logb(pi)+0.5*(sum(digamma(0.5*(v[m]+1-1:Dim))))-0.5*logb(det(sigma[[m]]))-0.5*Dim/k[m]-0.5*v[m]*t(Data_sequence[[t]]-u[,m])%*%solve(sigma[[m]])%*%(Data_sequence[[t]]-u[,m])+max_temp);
+          }
+         }
+
+       Eq_A = W_A/rowSums(W_A)#Get the expectation of A with q(A) density function
       eigen_value= eigen(Eq_A)
       pi_hat = eigen_value$vectors[,1] # corresponding to biggest eigen_value, initiate original distribution in forward algorithm
        for(tag in j:(j+sub_length-1))  # tag means time
@@ -155,6 +165,7 @@ SVI.HMM <- function( Data_sequence, # Observed data
             }
           }
           q_transition[tag,,]=q_transition[tag,,]/sum(q_transition[tag,,])
+
         }
         else
         {
@@ -196,8 +207,7 @@ SVI.HMM <- function( Data_sequence, # Observed data
         }
       }
       # 调和数列
-      W_A = ((1-((i-1)*(T-sub_length+1)+j)^(-1))*W_A
-             +((i-1)*(T-sub_length+1)+j)^(-1)*(((T-sub_length+1)/(sub_length-1))*q_tran_sum+U_A))
+      W_A = ((1-((i-1)*(T-sub_length+1)+j)^(-1))*W_A+((i-1)*(T-sub_length+1)+j)^(-1)*(((T-sub_length+1)/(sub_length-1))*q_tran_sum+U_A))
       u = (1-((i-1)*(T-sub_length+1)+j)^(-1))*u+((i-1)*(T-sub_length+1)+j)^(-1)*((T-sub_length+1)/sub_length*q_x_sum1+U_phi1)
       k = (1-((i-1)*(T-sub_length+1)+j)^(-1))*k+((i-1)*(T-sub_length+1)+j)^(-1)*((T-sub_length+1)/sub_length*q_x_sum2+U_phi2)
       for(i_local in 1:K)
@@ -205,23 +215,35 @@ SVI.HMM <- function( Data_sequence, # Observed data
         sigma[[i_local]]=(1-((i-1)*(T-sub_length+1)+j)^(-1))*sigma[[i_local]]+((i-1)*(T-sub_length+1)+j)^(-1)*((T-sub_length+1)/sub_length*q_x_sum3[i_local,,]+U_phi3[[i_local]])
       }
       v = (1-((i-1)*(T-sub_length+1)+j)^(-1))*v+((i-1)*(T-sub_length+1)+j)^(-1)*((T-sub_length+1)/sub_length*q_x_sum4+U_phi4)
-      write.table(W_A,"W_A.txt",append = T)
-      write.table(u,"u.txt",append = T)
-      write.table(k,"k.txt",append = T)
-      write.table(sigma,"sigma.txt",append = T)
-      write.table(v,"v.txt",append = T)
     }
   }
-  return(q_transition)
+    result <- list(W_A)
+   result[[1]]=  W_A
+   result[[2]]=  u
+   result[[3]] = k
+   result[[4]] =sigma
+   result[[5]] = v
+  return(result)
 }
-data <-list(c(1.8,2.0),c(1,2),c(1.1,1.6),c(1.7,1.7),c(1,2),c(1.1,1.6),c(1,2),c(1.1,1.6),c(1.7,1.7),c(1,2),c(1.1,1.6),c(2,4),c(3,3))
+data <-list(c(1.8,2.0))
+sigma0 = diag(rep(100,2))
+for(i in 1:100)
+{
+  if(i%%4==0||i%%4==1)
+  {
+    data[[i]]=rnorm(2);
+  }
+  else
+  {
+    data[[i]]= rnorm(2,c(50,50),10);
+  }
+}
 K=2
 Dim=length(data[[1]])# Gassiuan Component Number
-alpha=1/K        #
 u0 = 1:Dim # initial mean value
 k0=1             # initial parameter
 v0=6             # initial parameter
-sigma0 = diag(rep(1,2)) # initial covariance with identity matrix
+ # initial covariance with identity matrix
 U_A = matrix(rep(1/K,K*K),K)        # Hyperperameter the same notation with the paper
 U_phi1 = matrix(rep(0,Dim*K),Dim) # Hyperperameter the same notation with the paper
 for(i in 1:K)
@@ -241,12 +263,12 @@ k = 1:K;                  # claim k, which controls Gussuian Distribution
 v = (3+Dim):(2+Dim+K);                  # claim v, which controls Gussuian Distribution
 for( i in 1:K)
 {
-  u[,i]=i*u0;                    # initial every component with the same mean value
+  u[,i]=u0;                    # initial every component with the same mean value
 }
 sigma = list(K)
 for(i in 1:K)
 {
-  sigma[[i]]= i*sigma0;         # initial every component with the same covariance
+  sigma[[i]]= sigma0;         # initial every component with the same covariance
 }
 W_A = matrix(1:(K*K),K);
-result = SVI.HMM(data,sub_length =13,K=2,W_A, u, k, sigma, v, U_A, U_phi1,U_phi2, U_phi3, U_phi4, Pass=100, pre=0.01)
+result = SVI.HMM(data,sub_length =100,K=2,W_A, u, k, sigma, v, U_A, U_phi1,U_phi2, U_phi3, U_phi4, Pass=1000, pre=0.01)
