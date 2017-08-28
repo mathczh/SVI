@@ -1,0 +1,44 @@
+#' Solve the hyperparameters in LDA
+#'
+#' @param X The Input data, should be a list
+#' @param K The number of the topics
+#' @param n The number of passes we run, also the maximum number of iteration
+#' @param alpha The prior of theta, distribution of vocabulary over different topics
+#' @param eta The prior of beta, distribution of topics in each position over different document.
+#' @param pre The stop criteria
+#' @param word_length The number of top words
+#'
+#' @author Zhehui Chen, Shiyang Li, Xingguo Li, Tuo Zhao
+#'
+#' @references Matthew D. Hoffman, David M. Blei, Chong Wang, John Paisley. Stochastic Variational Inference. \emph{Journal of Machine Learning Research}, 2013\cr
+#' @description In this function,we require users to input their data by a list, that is, each document is one vector as a component in the list. First, we remove the stop words in each document to make those top words more meaningful. Then we build a dictionary of these document. Finally, we implement the LDA with SVI. Since we initialize the latent parameters randomly, you may not get the same result even you have the same input.
+#' @return All the hyperparameters in the model. \item{Lambda}{The hyperparameter for each words of the dictionary in each topic.}\item{phi}{The hyperparameter for different topics of each position in each document.}\item{gamma}{The hyperparameter for topics proportion in each document.}\item{Topic}{The top words in each topic.}\item{Dictionary}{The dictionary for all documents except the stop words.}
+#' @examples #####################################################################################
+#' ## test data
+#' doc_a = "Brocolli is good to eat. My brother likes to eat good brocolli, but not my mother."
+#' doc_b = "My mother spends a lot of time driving my brother around to baseball practice."
+#' doc_c = "Some health experts suggest that driving may cause increased tension and blood pressure."
+#' doc_d = "I often feel pressure to perform well at school, but my mother never seems to drive my brother to do better."
+#' doc_e = "Health professionals say that brocolli is good for your health."
+#' data <- list(doc_a,doc_b,doc_c,doc_d,doc_e)
+#' ## Initial prior parameters
+#' K=3;
+#' alpha=1/K;
+#' eta=0.01;
+#' n=1;
+#' pre=0.01;
+#' word_length=3;
+#' ## run the function
+#' t=LDA.SVI(data,K,n,alpha,eta,pre,word_length)
+LDA.SVI<-function(X, # the Input data
+                  K, # the number of the topics
+                  n, # the number of the passes
+                  alpha, # the parameter of theta
+                  eta, # the parameter of beta
+                  pre, # the stop criteria
+                  word_length # the number of top words
+)
+{
+  t=  SVI_LDA(X,K,n,alpha,eta,pre,word_length);
+  return(t)
+}
