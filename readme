@@ -2,3 +2,4 @@ In SVI folder, there are the codes we write. And SVI_0.1.0.tar.gz is what we bui
 In the future, we will release this through CRAN. The package we build calculates the approximate posterior in two cases: 1.Latent Dirichlet Allocation and 2. Hidden Markov Model, by stochastic variational inference. 
 In this version, for LDA setting, we require users do data pre-processing themselves, that is, users need to remove the stop words and switch the documents to list by themselves. We may add this function in the future. 
 We will add some class functions soon. Usage and examples of this package can be seen in the document.
+For this version, we recommend users use a windows system, for the latest mac system, there exist some bugs.
