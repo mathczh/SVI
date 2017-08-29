@@ -1,0 +1,5 @@
+In SVI folder is the code we write. And SVI_0.1.0.tar.gz is we build in our own computer. Users can install through this 
+document. In the future, we will release this through CRAN. The package we build calculates the approximate posterior in
+two cases through the stochastic variational inference. In this version, for LDA setting, we require the user do data 
+pre-processing themselves, that is, users need to remove the stop words by themselves. We may add this function in the future. 
+We also will add some class functions soon. The usage can be seen in the documents.
