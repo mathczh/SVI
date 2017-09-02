@@ -80,7 +80,6 @@ SVI.HMM <- function( Data_sequence, # Observed data
   interval = 3
   batch_factor = 8
   test_time=0
-  flag = 0
   while(norm(W_A-W_A_old,"F")/norm(W_A)>=pre&&i<Pass)
   {
     i=i+1
@@ -90,7 +89,7 @@ SVI.HMM <- function( Data_sequence, # Observed data
     q_x_sum2 = rep(0,K);
     q_x_sum4 = q_x_sum2
     q_x_sum3 = array(rep(0,K*Dim*Dim),c(K,Dim,Dim))
-    if(interval>(T-sub_length+1)||length(seq.int(i%%interval+1,(T-sub_length+1),interval))<=batch_factor)
+    if(interval>(T-sub_length+1)||length(seq.int(i%%interval+1,(T-sub_length+1),interval))<batch_factor)
     {
       for(j in 1:(T-sub_length+1))  # sample each subchain
       {
