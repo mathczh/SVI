@@ -55,10 +55,23 @@ SEXP SVI_LDA(Rcpp:: List &X,
   }
   Rcpp::NumericMatrix gamma(K,D) ; //random initial with all 0 entry
   Rcpp::List phi(D);
-  for(int i=0;i<n;i++)
-  {
+  int flag = 0;
+  int i =0;
+  Rcpp::NumericMatrix Lambda_old(V,K);
+  while( i <n && flag ==0){
+	if (flag == 1) 
+	{
+		break;	
+	}
+	i++;
     for(int d=0;d<D;d++)
     {
+	  if (sum(abs(Lambda-Lambda_old))/((sum(abs(Lambda_old)))+0.000001) <= pre)
+	  {
+		  flag = 1;
+		  break;
+	  }
+	  Lambda_old = Lambda;
       for(int v=0;v<K;v++)
       {
         gamma(v,d)=1;
@@ -68,11 +81,8 @@ SEXP SVI_LDA(Rcpp:: List &X,
       Rcpp::NumericMatrix w(V,Y.size()) ;
       Rcpp::NumericMatrix mid(Y.size(),K);
       Rcpp::NumericMatrix mid_norm(Y.size(),K);
-      double norm = sum(abs(gamma(_,d)-gamma1));//calculate norm as stop criteria
-      double old_norm = 0;
-      while((norm-old_norm)/norm>=pre)
+      while(sum(abs(gamma(_,d)-gamma1))/((sum(abs(gamma1)))+0.000001)>=pre)
       {
-        old_norm = norm;
         gamma1=gamma(_,d);
         for(int j=0;j<Y.size();j++)
         {
@@ -85,7 +95,7 @@ SEXP SVI_LDA(Rcpp:: List &X,
           mid_norm(j,_)=mid(j,_)/sum(mid(j,_));//normalize parameter
         }
         gamma(_,d)= alpha+colSums(mid_norm);
-        norm = sum(abs(gamma(_,d)-gamma1));
+        sum(abs(gamma(_,d)-gamma1));
       }
       phi[d]= mid_norm;
       arma::mat midnorm_temp = as<arma::mat>(mid_norm);//convert NumericMtrix into arma::mat;
@@ -96,6 +106,7 @@ SEXP SVI_LDA(Rcpp:: List &X,
       Lambda=Rcpp::wrap(Lambda_temp);
     }
   }
+  int Epoch = i;
   arma::mat Lambda_temp = as<arma::mat>(Lambda);
   Rcpp::StringMatrix Topic(word_length,K);
   for(int i=0;i<K;i++)
@@ -108,7 +119,7 @@ SEXP SVI_LDA(Rcpp:: List &X,
     }
   }
 
-  return Rcpp::List::create(Lambda,phi,gamma,Topic,Dictionary);
+  return Rcpp::List::create(Lambda,phi,gamma,Topic,Dictionary,Epoch);
 }
 /*** R
 */
