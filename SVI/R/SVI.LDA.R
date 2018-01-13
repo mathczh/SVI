@@ -39,6 +39,79 @@ LDA.SVI<-function(X, # the Input data
                   word_length # the number of top words
 )
 {
+  library(Rcpp)
+  library(RcppArmadillo)
+  sourceCpp(file='src/LDA.cpp')
   t=  SVI_LDA(X,K,n,alpha,eta,pre,word_length);
+  names(t) <- c("Lambda","phi","gamma","Topic","Dictionary","Epoch")
+  K_topic_name <- c("Topic 1")
+  for(i in  2:K)
+  {
+    K_topic_name <-c(K_topic_name,paste0("Topic ",toString(i)))
+  }
+  Top_word_name <- c("Top word 1")
+  for(i in 2:word_length)
+  {
+    Top_word_name <-c(Top_word_name,paste0("Top word ",toString(i)))
+  }
+  rownames(t$Topic) <- Top_word_name
+  colnames(t$Topic) <- K_topic_name
   return(t)
 }
+Tokenize<-function(Data_set, # the Input original data, which is a list data type
+                   Language = "en"# the language type you want to produce, defaut language is en
+){
+  
+  tokenized_data <-tokenize_words(Data_set, stopwords = stopwords(Language));
+  return(tokenized_data);
+}
+remove_HTML_markup <- function(s) tryCatch({
+  doc <- htmlTreeParse(paste("<!DOCTYPE html>", s),
+                       asText = TRUE, trim = FALSE) 
+  xmlValue(xmlRoot(doc)) 
+}, error = function(s) s)
+library(corpus.JSS.papers)
+library(tokenizers)
+library(SnowballC)
+library("tm")
+library("XML")
+data("JSS_papers")
+LDA_document <- JSS_papers[,"description"]
+LDA_document <- Corpus(VectorSource(sapply(LDA_document,
+                                     remove_HTML_markup)))
+Sys.setlocale("LC_COLLATE", "C")
+LDA_document <- tm_map(LDA_document, content_transformer(tolower))
+LDA_document <- tm_map(LDA_document,stripWhitespace)
+LDA_document <- tm_map(LDA_document,  removePunctuation)
+LDA_document <- tm_map(LDA_document,  removeWords, c("the","and",stopwords("english")))
+LDA_document <- tm_map(LDA_document,  stemDocument)
+LDA_document <- tm_map(LDA_document,  removeNumbers)
+LDA_document <- as.list(LDA_document)
+# you may use content_transformer(FUN) function or whatever else to custom your content transforms. More details are in "tm" package.
+LDA_document<- Tokenize(LDA_document)
+print("Finish Tokenize")
+#print(LDA_document)
+print("Run Start: ")
+time_start <- Sys.time()
+K=30
+alpha=50/K;
+eta=0.1;
+n=100;
+pre=0.0001;
+top_word = 5
+result=LDA.SVI(LDA_document,K,n,alpha,eta,pre, top_word)
+print("Run End: ")
+time_end <- Sys.time()
+print("Run total time: ")
+print(time_end-time_start)
+file_out_name <- "file/log2.txt"
+write.table(result$Topic,file_out_name)
+cat("Epoch", file = file_out_name,append = T, sep = "\n")
+cat(result$Epoch,file = file_out_name,append = T, sep = "\n")
+cat("Run time",file = file_out_name,append = T, sep = "\n")
+cat("Run Start time",file = file_out_name,append = T, sep = "\n")
+cat(toString(time_start),file = file_out_name,append = T, sep = "\n")
+cat("Run End time",file = file_out_name,append = T, sep = "\n")
+cat(toString(time_end),file = file_out_name,append = T, sep = "\n")
+cat("Run Total time",file = file_out_name,append = T, sep = "\n")
+cat(time_end-time_start,file = file_out_name,append = T, sep = "\n")
