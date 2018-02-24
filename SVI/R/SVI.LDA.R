@@ -1,56 +1,24 @@
-#' Solve the hyperparameters in LDA
-#'
-#' @param X The Input data, should be a list
-#' @param K The number of the topics
-#' @param n The number of passes we run, also the maximum number of iteration
-#' @param alpha The prior of theta, distribution of vocabulary over different topics
-#' @param eta The prior of beta, distribution of topics in each position over different document.
-#' @param pre The stop criteria
-#' @param word_length The number of top words
-#'
-#' @author Zhehui Chen, Shiyang Li, Xingguo Li, Tuo Zhao
-#'
-#' @references Matthew D. Hoffman, David M. Blei, Chong Wang, John Paisley. Stochastic Variational Inference. \emph{Journal of Machine Learning Research}, 2013\cr
-#' @description In this function,we require users to input their data by a list, that is, each document is one vector as a component in the list. First, we remove the stop words in each document to make those top words more meaningful. Then we build a dictionary of these document. Finally, we implement the LDA with SVI. Since we initialize the latent parameters randomly, you may not get the same result even you have the same input.
-#' @return All the hyperparameters in the model. \item{Lambda}{The hyperparameter for each words of the dictionary in each topic.}\item{phi}{The hyperparameter for different topics of each position in each document.}\item{gamma}{The hyperparameter for topics proportion in each document.}\item{Topic}{The top words in each topic.}\item{Dictionary}{The dictionary for all documents except the stop words.}
-#' @examples #####################################################################################
-#' ## test data
-#' doc_a = "Brocolli is good to eat. My brother likes to eat good brocolli, but not my mother."
-#' doc_b = "My mother spends a lot of time driving my brother around to baseball practice."
-#' doc_c = "Some health experts suggest that driving may cause increased tension and blood pressure."
-#' doc_d = "I often feel pressure to perform well at school, but my mother never seems to drive my brother to do better."
-#' doc_e = "Health professionals say that brocolli is good for your health."
-#' data <- list(doc_a,doc_b,doc_c,doc_d,doc_e)
-#' ## Initial prior parameters
-#' K=3;
-#' alpha=1/K;
-#' eta=0.01;
-#' n=1;
-#' pre=0.01;
-#' word_length=3;
-#' ## run the function
-#' t=LDA.SVI(data,K,n,alpha,eta,pre,word_length)
-LDA.SVI<-function(X, # the Input data
-                  K, # the number of the topics
-                  n, # the number of the passes
+LDA.SVI<-function(Documents , # the Input data
+                  K,# the number of the topics
+                  max_iter_local, 
+                  max_iter_global, # the number of the passes
                   alpha, # the parameter of theta
                   eta, # the parameter of beta
-                  pre, # the stop criteria
-                  word_length # the number of top words
+                  tol_local, # the stop criteria
+                  tol_global,
+                  batch_size, # batch size
+                  word_num  # the number of top words
 )
 {
-  library(Rcpp)
-  library(RcppArmadillo)
-  sourceCpp(file='src/LDA.cpp')
-  t=  SVI_LDA(X,K,n,alpha,eta,pre,word_length);
-  names(t) <- c("Lambda","phi","gamma","Topic","Dictionary","Epoch")
+  t=  SVI_LDA(Documents,K,max_iter_local,max_iter_global,alpha,eta,tol_local,tol_global,batch_size, word_num);
+  names(t) <- c("Lambda","phi","gamma","Topic","Dictionary","global_iteration","E_beta","E_theta","log_likelihood","Each_doc_likelihood")
   K_topic_name <- c("Topic 1")
   for(i in  2:K)
   {
     K_topic_name <-c(K_topic_name,paste0("Topic ",toString(i)))
   }
   Top_word_name <- c("Top word 1")
-  for(i in 2:word_length)
+  for(i in 2:word_num)
   {
     Top_word_name <-c(Top_word_name,paste0("Top word ",toString(i)))
   }
@@ -58,60 +26,140 @@ LDA.SVI<-function(X, # the Input data
   colnames(t$Topic) <- K_topic_name
   return(t)
 }
-Tokenize<-function(Data_set, # the Input original data, which is a list data type
-                   Language = "en"# the language type you want to produce, defaut language is en
-){
-  
-  tokenized_data <-tokenize_words(Data_set, stopwords = stopwords(Language));
-  return(tokenized_data);
+dtm2svi.ldaformat <- function(dtm){
+  LDA_document <- dtm2ldaformat(dtm)
+  Documents_matrix <- LDA_document$documents
+  Dictionary <- LDA_document$vocab
+  Documents <- list()
+  for(i in 1:length(Documents_matrix)){
+    document= Documents_matrix[[i]];
+    document_word <- NULL;
+    for(j in 1:ncol(document)){
+      index <- document[1,j]
+      rep_times <-document[2,j]
+      word <- Dictionary[index]
+      document_word <- c(document_word,rep(word,rep_times))
+    }
+    Documents[[i]] <- document_word
+  }
+  return (Documents)
 }
+lda2svi.ldaformat <- function(documents,
+                        vocab){
+  Documents_matrix <- documents
+  Dictionary <- vocab
+  Documents <- list()
+  for(i in 1:length(Documents_matrix)){
+    document= Documents_matrix[[i]];
+    document_word <- NULL;
+    for(j in 1:ncol(document)){
+      index <- document[1,j]
+      rep_times <-document[2,j]
+      word <- Dictionary[index]
+      document_word <- c(document_word,rep(word,rep_times))
+    }
+    Documents[[i]] <- document_word
+  }
+  return (Documents)
+}
+library(corpus.JSS.papers)
+library(ggplot2)
+library(reshape2)
+library(Rcpp)
+library(RcppArmadillo)
+sourceCpp(file='src/LDA.cpp')
+data("JSS_papers")
+#JSS_papers <- JSS_papers[JSS_papers[,"date"] < "2010-08-05",]
+JSS_papers <- JSS_papers[sapply(JSS_papers[, "description"],Encoding) == "unknown",]
+library("tm")
+library("XML")
+library("topicmodels")
 remove_HTML_markup <- function(s) tryCatch({
   doc <- htmlTreeParse(paste("<!DOCTYPE html>", s),
                        asText = TRUE, trim = FALSE) 
   xmlValue(xmlRoot(doc)) 
 }, error = function(s) s)
-library(corpus.JSS.papers)
-library(tokenizers)
-library(SnowballC)
-library("tm")
-library("XML")
-data("JSS_papers")
-LDA_document <- JSS_papers[,"description"]
-LDA_document <- Corpus(VectorSource(sapply(LDA_document,
+sequ_documents <- 1:length(JSS_papers[, "description"])
+corpus <- Corpus(VectorSource(sapply(JSS_papers[, "description"],
                                      remove_HTML_markup)))
 Sys.setlocale("LC_COLLATE", "C")
-LDA_document <- tm_map(LDA_document, content_transformer(tolower))
-LDA_document <- tm_map(LDA_document,stripWhitespace)
-LDA_document <- tm_map(LDA_document,  removePunctuation)
-LDA_document <- tm_map(LDA_document,  removeWords, c("the","and",stopwords("english")))
-LDA_document <- tm_map(LDA_document,  stemDocument)
-LDA_document <- tm_map(LDA_document,  removeNumbers)
-LDA_document <- as.list(LDA_document)
-# you may use content_transformer(FUN) function or whatever else to custom your content transforms. More details are in "tm" package.
-LDA_document<- Tokenize(LDA_document)
-print("Finish Tokenize")
-#print(LDA_document)
-print("Run Start: ")
-time_start <- Sys.time()
-K=30
-alpha=50/K;
-eta=0.1;
-n=100;
-pre=0.0001;
-top_word = 5
-result=LDA.SVI(LDA_document,K,n,alpha,eta,pre, top_word)
-print("Run End: ")
-time_end <- Sys.time()
-print("Run total time: ")
-print(time_end-time_start)
-file_out_name <- "file/log2.txt"
-write.table(result$Topic,file_out_name)
-cat("Epoch", file = file_out_name,append = T, sep = "\n")
-cat(result$Epoch,file = file_out_name,append = T, sep = "\n")
-cat("Run time",file = file_out_name,append = T, sep = "\n")
-cat("Run Start time",file = file_out_name,append = T, sep = "\n")
-cat(toString(time_start),file = file_out_name,append = T, sep = "\n")
-cat("Run End time",file = file_out_name,append = T, sep = "\n")
-cat(toString(time_end),file = file_out_name,append = T, sep = "\n")
-cat("Run Total time",file = file_out_name,append = T, sep = "\n")
-cat(time_end-time_start,file = file_out_name,append = T, sep = "\n")
+JSS_dtm <- DocumentTermMatrix(corpus,
+                              control = list(stemming = TRUE, stopwords = TRUE, minWordLength = 3,
+                                             removeNumbers = TRUE, removePunctuation = TRUE))
+dim(JSS_dtm)
+library("slam")
+summary(col_sums(JSS_dtm))
+term_tfidf <- tapply(JSS_dtm$v/row_sums(JSS_dtm)[JSS_dtm$i], JSS_dtm$j, mean) *log2(nDocs(JSS_dtm)/col_sums(JSS_dtm > 0))
+summary(term_tfidf)
+JSS_dtm <- JSS_dtm[,term_tfidf >= 0.1]
+JSS_dtm <- JSS_dtm[row_sums(JSS_dtm) > 0,]
+Documents <- dtm2svi.ldaformat(JSS_dtm)
+topic_num = seq(2,100,5)
+repete_times <-1
+log_likelihood <- matrix(rep(0,repete_times*length(topic_num)), ncol = repete_times)
+time_cost <- matrix(rep(0,repete_times*length(topic_num)), ncol = repete_times)
+topicmodel_loglik <- matrix(rep(0,repete_times*length(topic_num)), ncol = repete_times)
+topicmodel_time_cost <- matrix(rep(0,repete_times*length(topic_num)), ncol = repete_times)
+for( rep_i in 1 : repete_times)
+{
+  rep_j = 0
+  for( K in topic_num){
+    rep_j = rep_j+1
+    print(K)
+    print("Run Start: ")
+    time_start <- unclass(as.POSIXct(Sys.time())) 
+    alpha=50/K;
+    eta=0.1;
+    max_iter_global=1000;
+    max_iter_local=1000;
+    tol_local=0.00001;
+    tol_global= 0.00001;
+    top_word_num = 5
+    batch_size = 1
+    result=LDA.SVI(Documents,K,max_iter_local,max_iter_global,alpha,eta,tol_local,tol_global,batch_size,top_word_num)
+    print("Run End: ")
+    time_end <- unclass(as.POSIXct(Sys.time())) 
+    log_likelihood[rep_j,rep_i] <- result$log_likelihood
+    print("Epoch Num: ")
+    print(result$global_iteration)
+    print("log_likelihood")
+    print(result$log_likelihood)
+    print("Run total time: ")
+    print(time_end-time_start)
+    time_cost[rep_j,rep_i] <- (time_end-time_start)
+  }
+  rep_j = 0
+  SEED <- 2010
+  for (k in topic_num)
+  {
+    rep_j = rep_j+1
+    print("Topicmodel Run Start: ")
+    time_start <- unclass(as.POSIXct(Sys.time()))
+    VEM = LDA(JSS_dtm, k = k, control = list(seed = SEED))
+    time_end <- unclass(as.POSIXct(Sys.time()))
+    print("Topicmodel Run End: ")
+    print(k)
+    print(logLik(VEM))
+    topicmodel_loglik[rep_j,rep_i] <- logLik(VEM)
+    print("Run total time: ")
+    print(time_end-time_start)
+    topicmodel_time_cost[rep_j,rep_i] <- (time_end-time_start)
+  }
+}
+log_likelihood <- rowSums(log_likelihood)/repete_times
+time_cost <- rowSums(time_cost)/repete_times
+topicmodel_loglik <- rowSums(topicmodel_loglik)/repete_times
+topicmodel_time_cost <- rowSums(topicmodel_time_cost)/repete_times
+
+model_data_loglik <- data.frame(topic_k = topic_num, topicmodel_loglik = topicmodel_loglik, SVI_LDA_loglik =log_likelihood)
+model_data_time <- data.frame(topic_k = topic_num, topicmodel_time = topicmodel_time_cost, svi_lda_time =time_cost)
+model_data_loglik= melt(model_data_loglik,id = "topic_k")
+model_data_time= melt(model_data_time,id = "topic_k")
+names(model_data_loglik)[names(model_data_loglik) =="value"] = "log_likehood"
+names(model_data_time)[names(model_data_time)=="value"] = "runtime"
+filename <- paste0("Doc_1to",as.character(length(sequ_documents)),"_tol_global=",as.character(tol_global),"_repete_times=",as.character(repete_times) ,"_batch_size=",as.character(batch_size),"tol_local=",as.character(tol_local),"max_global_iteration=",as.character(max_iter_global),"max_local_iteration=",as.character(max_iter_local),".pdf")
+p <- ggplot(data = model_data_loglik ,aes(x = topic_k, y = log_likehood, colour=variable)) + geom_point(size = 2)+geom_line()
+ggsave(p,file=filename, width = 12, height = 4)
+filename <- paste0("time_cost_",filename)
+plot_time <- ggplot(data= model_data_time, aes(x = topic_k, y = runtime)) + geom_point(size = 2)+geom_line(aes(color=variable))
+ggsave(plot_time, file=filename, width=12, height=4)
