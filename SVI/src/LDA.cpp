@@ -60,15 +60,14 @@ SEXP SVI_LDA(Rcpp:: List &X,
   }
   arma::mat gamma(K,D) ; //random initial with all 0 entry
   gamma.fill(1);
-  List phi(D);
+  Rcpp::List phi(D);
   arma::mat Lambda_old(V,K);
   Lambda_old.fill(0);
-  List index(D);
+  Rcpp::List index(D);
   Rcpp::StringVector Y;
-  Rcpp::IntegerVector index_local(Y.size());
   for(int i_=0;i_<D;i_++){
     Y = Rcpp::as<Rcpp::StringVector>(X[i_]) ;
-    index_local.fill(0);
+    Rcpp::IntegerVector index_local(Y.size());
     for(int j=0;j<Y.size();j++)
       {
         iter =mymap.find(""+Y[j]+"");
@@ -76,19 +75,20 @@ SEXP SVI_LDA(Rcpp:: List &X,
       }
       index[i_] = index_local;
   }
+  Rcpp::IntegerVector index_local;
   int global_iteration = 0;
-  int iteration_local =0;
   int flag = 0;
   int batch_count = 0;
   while( global_iteration < max_iter_global && flag ==0){
   for(int d=0;d<D;d++){
-	   if (((Rcpp::wrap( sum(abs(Lambda-Lambda_old))/((sum(abs(Lambda_old)))+0.000001) <= tol_global))|| global_iteration > max_iter_global ) &&batch_count==0){
+	   if ( (norm(Lambda-Lambda_old, 1)/(norm(Lambda_old,1)+0.000001) <= tol_global || global_iteration > max_iter_global )
+       && batch_count==0){
 		  flag = 1;
 		  break;
 	   }
 	    global_iteration++;
 	    Lambda_old = Lambda;
-      gamma.col(d) = 1;
+      gamma.col(d).fill(1);
       arma::vec gamma1(K);
       Y = Rcpp::as<Rcpp::StringVector>(X[d]) ;
       arma::mat w(V,Y.size()) ;
@@ -97,8 +97,9 @@ SEXP SVI_LDA(Rcpp:: List &X,
       mid_norm.fill(1);
       arma::mat mid_norm_old(Y.size(),K);
       index_local = index[d];
-      iteration_local =0;
-      while((norm(gamma.col(d)-gamma1,2)/(norm(gamma1,2)+0.00000001)>=tol_local || norm(mid_norm-mid_norm_old,2)/(norm(mid_norm_old,2)+0.00000001)>=tol_local)&&iteration_local<max_iter_local)
+      int iteration_local =0;
+      while((norm(gamma.col(d)-gamma1,1)/(norm(gamma1,1)+0.000001)>=tol_local
+      || norm(mid_norm-mid_norm_old,1)/(norm(mid_norm_old,1)+0.000001)>=tol_local)&&iteration_local<max_iter_local)
       {
         iteration_local++;
         mid_norm_old = mid_norm;
@@ -113,13 +114,19 @@ SEXP SVI_LDA(Rcpp:: List &X,
           w_temp[index_inmap]=1;
           w.col(j)= w_temp;
           mid(j,_)=exp(digamma(gamma_temp1)+digamma(Lambda_temp(index_inmap,_))-digamma(colSums(Lambda_temp)));
-          mid(j,_)= mid(j,_)/sum(mid(j,_));
+          if(sum(mid(j,_)) ==0){
+            std::cout << "normalize 'mid' Variable Error because its value is " <<0 << '\n';
+            for(int i=0;i<K;i++){
+              mid(j,i) = 1/K;
+            }
+          }
+          else{
+            mid(j,_)= mid(j,_)/sum(mid(j,_));
+          }
         }
         mid_norm = as<arma::mat>(mid); // mid_norm is actually the arma data type of normalized mid
         Rcpp::NumericVector gamma_d = alpha+colSums(mid);
         gamma.col(d)= as<arma::vec>(gamma_d);
-        std::std::cout << "Gamma's value" << '\n';
-        gamma.col(d).print();
       }
       phi[d]= mid_norm;
       batch_count++;
@@ -132,18 +139,14 @@ SEXP SVI_LDA(Rcpp:: List &X,
       }
     }
   }
-  std::cout<<"Print without wrong 1 "<<std::endl;
   arma::mat E_beta (V,K);
   arma::mat E_theta (K,D);
   for(int i=0; i < K; i++){
     E_beta.col(i)= Lambda.col(i)/sum(Lambda.col(i));
   }
-  E_beta.print();
   for(int i=0;i<D;i++){
     E_theta.col(i) = gamma.col(i)/sum(gamma.col(i));
   }
-  E_theta.print();
-  std::cout<<"Print without wrong 2"<<std::endl;
   Rcpp::NumericVector Each_doc_likelihood (D);
   for(int i_=0;i_< index.size();i_++){
     index_local = index[i_];
@@ -155,20 +158,19 @@ SEXP SVI_LDA(Rcpp:: List &X,
       Each_doc_likelihood[i_] = mysum;
       log_likelihood=log_likelihood+mysum;
   }
-  std::cout<<"Print without wrong 3 "<<std::endl;
   Rcpp::StringMatrix Topic(word_length,K);
   arma::uvec topic_index;
   for(int i=0;i<K;i++)
   {
-    topic_index = arma::sort_index(E_beta.col(i),"descend");
+    arma::uvec  sort_index = arma::sort_index(E_beta.col(i),"descend");
     for(int j=0;j<word_length;j++)
     {
-      Topic(j,i)=Dictionary[topic_index[j]];
+      Topic(j,i)=Dictionary[sort_index[j]];
     }
   }
-  std::cout<<"Print without wrong 4 "<<std::endl;
+  std::cout<<"log_likelihood "<<std::endl;
   std::cout << log_likelihood <<std::endl;
-  return Rcpp::List::create(Lambda,phi,gamma,Topic,Dictionary,global_iteration,log_likelihood,Each_doc_likelihood);
+  return Rcpp::List::create(Lambda,phi,gamma,Topic,Dictionary,global_iteration,E_beta,E_theta,log_likelihood,Each_doc_likelihood);
 }
 /*** R
 */
